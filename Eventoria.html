@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Eventoria Zambia</title>
+
+<style>
+   body {
+       margin:0;
+       font-family:Arial;
+       background:#111;
+       color:white;
+   }
+   nav {
+       background:#000000cc;
+       padding:15px;
+       display:flex;
+       justify-content:space-between;
+       color:white;
+   }
+   nav a {
+       color:white;
+       margin-left:20px;
+       text-decoration:none;
+       font-weight:bold;
+   }
+   .page {
+       display:none;
+       padding:20px;
+   }
+   .active {
+       display:block;
+   }
+   .event-card {
+       background:#222;
+       padding:15px;
+       border-radius:10px;
+       margin-bottom:20px;
+   }
+   input, button {
+       padding:10px;
+       margin:5px 0;
+       width:100%;
+       border-radius:5px;
+       border:none;
+   }
+   button {
+       background:green;
+       color:white;
+       cursor:pointer;
+       font-weight:bold;
+   }
+   .home-bg {
+       background:url('https://images.unsplash.com/photo-1505245208761-ba872912fac0?q=80&w=1400') center/cover no-repeat;
+       height:70vh;
+       display:flex;
+       align-items:center;
+       justify-content:center;
+       text-align:center;
+       color:white;
+       font-size:40px;
+       font-weight:bold;
+       text-shadow:2px 2px 5px black;
+   }
+</style>
+</head>
+
+<body>
+
+<nav>
+   <div>🎟️ Eventoria Zambia</div>
+   <div>
+       <a href="#" onclick="showPage('home')">Home</a>
+       <a href="#" onclick="showPage('events')">Events</a>
+       <a href="#" onclick="showPage('cart')">Cart (<span id='cart-count'>0</span>)</a>
+       <a href="#" onclick="adminLogin()">Admin</a>
+   </div>
+</nav>
+
+<!-- HOME -->
+<div id="home" class="page active">
+   <div class="home-bg">
+       Welcome to Eventoria Zambia
+   </div>
+</div>
+
+<!-- EVENTS -->
+<div id="events" class="page">
+   <h2>Available Concerts</h2>
+   <div id="events-list"></div>
+</div>
+
+<!-- CART -->
+<div id="cart" class="page">
+   <h2>Your Cart</h2>
+   <div id="cart-items"></div>
+   <h3>Total: K<span id="cart-total">0</span></h3>
+   <button onclick="goCheckout()">Proceed to Payment</button>
+</div>
+
+<!-- CHECKOUT -->
+<div id="checkout" class="page">
+   <h2>Payment Method</h2>
+   <h3>Mobile Money</h3>
+   <p>Send to: <b>0972163319 (Emeldah khondowe)</b></p>
+   <p>Send to: <b>0964365021 (Kalumbu Banda)</b></p>
+
+   <h3>Bank Transfer</h3>
+   <p>Account Name: <b>Andrew Manda</b></p>
+   <p>Bank: <b>Bank of Zambia</b></p>
+   <p>Account Number: <b>4383 7560 2087 2988</b></p>
+
+   <button onclick="sendProof()">Send Proof of Payment</button>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="page">
+   <h2>Admin Panel</h2>
+   <p>Edit event names, ticket types & prices.</p>
+   <div id="admin-events"></div>
+</div>
+
+<script>
+/* ----- DATA ----- */
+let events = [
+   {
+       id: 1,
+       name: "Summer Music Festival",
+       tickets: [
+           { type: "Standard", price: 150 },
+           { type: "VIP", price: 300 }
+       ]
+   },
+   {
+       id: 2,
+       name: "Zambia Night Concert",
+       tickets: [
+           { type: "Bronze", price: 120 },
+           { type: "Gold", price: 250 }
+       ]
+   }
+];
+
+let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+/* ----- PAGE NAVIGATION ----- */
+function showPage(id) {
+   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+   document.getElementById(id).classList.add("active");
+
+   updateCartCount();
+
+   if(id === "events") loadEvents();
+   if(id === "cart") loadCart();
+   if(id === "admin") loadAdmin();
+}
+
+/* ----- ADMIN LOGIN ----- */
+function adminLogin() {
+   let pass = prompt("Enter admin password:");
+   if (pass === "2jji124qAAA") {
+       showPage("admin");
+   } else {
+       alert("Wrong password!");
+   }
+}
+
+/* ----- EVENTS PAGE ----- */
+function loadEvents() {
+   let container = document.getElementById("events-list");
+   container.innerHTML = "";
+
+   events.forEach(ev => {
+       let html = `
+       <div class="event-card">
+           <h3>${ev.name}</h3>
+           ${ev.tickets.map((t,i)=>`
+               <p>${t.type} - K${t.price}
+               <button onclick="addToCart(${ev.id}, ${i})">Add</button></p>
+           `).join("")}
+       </div>`;
+       container.innerHTML += html;
+   });
+}
+
+/* ----- CART FUNCTIONS ----- */
+function addToCart(eventId, ticketIndex) {
+   let ev = events.find(e => e.id === eventId);
+   let ticket = ev.tickets[ticketIndex];
+
+   cart.push({ event: ev.name, type: ticket.type, price: ticket.price });
+
+   localStorage.setItem("cart", JSON.stringify(cart));
+   updateCartCount();
+
+   alert("Ticket added to cart!");
+}
+
+function loadCart() {
+   let items = document.getElementById("cart-items");
+   let total = 0;
+   items.innerHTML = "";
+
+   cart.forEach((c,i) => {
+       total += c.price;
+       items.innerHTML += `
+         <p>
+           ${c.event} - ${c.type} : K${c.price}
+           <button style="background:red" onclick="removeFromCart(${i})">Remove</button>
+         </p>`;
+   });
+
+   document.getElementById("cart-total").innerText = total;
+}
+
+function removeFromCart(index) {
+   cart.splice(index, 1);
+   localStorage.setItem("cart", JSON.stringify(cart));
+   loadCart();
+   updateCartCount();
+}
+
+function updateCartCount() {
+   document.getElementById("cart-count").innerText = cart.length;
+}
+
+function goCheckout() {
+   showPage("checkout");
+}
+
+/* ----- SEN PROOF OF PAYMENT ----- */
+function sendProof() {
+   const email = "eventoriazambia@gmail.com";
+   const subject = encodeURIComponent("Proof of Payment - Event Ticket");
+   const body = encodeURIComponent("Hello Eventoria Zambia,\n\nI have made the payment. Please find proof attached.\n\nThank you.");
+
+   window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+}
+
+/* ----- ADMIN PAGE ----- */
+function loadAdmin() {
+   let container = document.getElementById("admin-events");
+   container.innerHTML = "";
+
+   events.forEach((ev,eIndex) => {
+       container.innerHTML += `
+           <h3>
+             <input value="${ev.name}" 
+                    onchange="editEventName(${eIndex}, this.value)">
+           </h3>
+
+           ${ev.tickets.map((t,tIndex)=>`
+               Ticket Type:
+               <input value="${t.type}" onchange="editTicketType(${eIndex},${tIndex}, this.value)"> 
+               Price:
+               <input type="number" value="${t.price}" onchange="editTicketPrice(${eIndex},${tIndex}, this.value)">
+               <br><br>
+           `).join("")}
+
+           <hr><br>
+       `;
+   });
+}
+
+function editEventName(eventIndex, value) {
+   events[eventIndex].name = value;
+   alert("Event name updated!");
+}
+
+function editTicketType(eIndex, tIndex, value) {
+   events[eIndex].tickets[tIndex].type = value;
+   alert("Ticket type updated!");
+}
+
+function editTicketPrice(eIndex, tIndex, value) {
+   events[eIndex].tickets[tIndex].price = Number(value);
+   alert("Ticket price updated!");
+}
+</script>
+
+</body>
+</html>
